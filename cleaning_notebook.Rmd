@@ -1,0 +1,103 @@
+---
+title: "cleaning_notebook"
+author: "Taylor Franklin"
+date: "1/5/2021"
+output: html_document
+---
+
+```{r}
+#importing libraries
+library(rvest)
+library(plyr)
+library(tidyverse)
+```
+
+
+```{r}
+#listing csvs within data folder
+season_files <- list.files(path='data', pattern="*.csv", full.names=TRUE)
+
+#combining all csvs into one list
+nhl17_20 <- ldply(season_files, read_csv)
+```
+```{r}
+#converting to tibble
+nhl17_20 <- nhl17_20 %>% 
+  as_tibble()
+```
+
+```{r}
+#dropping duplicated columns
+nhl17_20 <- nhl17_20 %>% 
+  select(-c(shifts, penalityMinutes))
+```
+
+```{r}
+#remove I_F_ from column names. Unless otherwise stated, stats should be assumed as an individual metric
+colnames(nhl17_20) <- colnames(nhl17_20) %>% 
+  str_replace('I_F_', '')
+
+#rename misspelled columns
+nhl17_20 <- nhl17_20 %>% 
+  rename(penaltyMinutes = penalityMinutes,
+         penaltyMinutesDrawn = penalityMinutesDrawn)
+```
+
+
+```{r}
+#adding additional calculations
+nhl17_20 <- nhl17_20 %>% 
+  mutate(
+    goals_above_expected = goals-xGoals,
+    goals_per60 = (goals/(icetime/60))*60,
+    xGoals_per60 = (xGoals/(icetime/60))*60,
+    reboundGoals_Percentage = reboundGoals/goals,
+    lowDangerShots_Percentage = lowDangerShots/shotAttempts,
+    mediumDangerShots_Percentage = mediumDangerShots/shotAttempts,
+    highDangerShots_Percentage = highDangerShots/shotAttempts, 
+    lowDangerGoals_Percentage = lowDangerGoals/goals,
+    mediumDangerGoals_Percentage = mediumDangerGoals/goals,
+    highDangerGoals_Percentage = highDangerGoals/goals
+  )
+```
+
+```{r}
+#defining variable groups
+player_info <- c('name', 'position', 'team', 'season', 'situation', 'games_played', 'icetime')
+
+traditional_stats <- c('goals', 'primaryAssists', 'secondaryAssists', 'points', 'penalties', 'penaltyMinutes')
+
+possession <- c('onIce_corsiPercentage', 'offIce_corsiPercentage', 'onIce_fenwickPercentage', 'offIce_fenwickPercentage')
+
+goals_stats <- c('goals', 'xGoals', 'goals_above_expected', 'goals_per60', 'xGoals_per60', 'reboundGoals_Percentage')
+
+team_scoring_rates <- c('OnIce_F_xGoals', 'OffIce_F_xGoals', 'onIce_xGoalsPercentage', 'offIce_xGoalsPercentage')
+
+shot_quality <- c('shotAttempts', 'shotsOnGoal', 'rebounds', 'lowDangerShots', 'lowDangerShots_Percentage', 'lowDangerGoals', 'lowDangerGoals_Percentage', 'mediumDangerShots', 'mediumDangerShots_Percentage', 'mediumDangerGoals', 'mediumDangerGoals_Percentage', 'highDangerShots', 'highDangerShots_Percentage', 'highDangerGoals', 'highDangerGoals_Percentage')
+```
+
+```{r}
+#narrowing dataset
+nhl17_20 <- nhl17_20 %>% 
+  select(player_info, traditional_stats, possession, goals_stats, team_scoring_rates, shot_quality)
+```
+
+```{r}
+#saving resulting dataset
+nhl17_20 %>% 
+  write_csv('nhl_stats_app/data/nhlstats.csv')
+```
+
+
+```{r}
+#nhl17_20 %>% 
+  #select(player_info, traditional_stats, possession, goals_stats, shot_quality) %>% 
+  #group_by(season, situation) %>% 
+  #mutate(
+    #across(
+     # c(traditional_stats, possession, goals_stats, shot_quality), 
+     # percent_rank, 
+      #.names = '{.col}_rank')) %>% 
+  #filter(name == 'Auston Matthews', season == '2019', situation == '5on5')
+```
+
