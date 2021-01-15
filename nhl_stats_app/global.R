@@ -2,12 +2,13 @@ library(shiny)
 library(shinythemes)
 library(tidyverse)
 library(plotly)
+library(DT)
 
 nhl_stats <- read_csv('data/nhlstats.csv')
 
-player_info <- c('name', 'position', 'team', 'season', 'situation', 'games_played', 'icetime')
+player_info <- c('name', 'position', 'team')
 
-traditional_stats <- c('goals', 'primaryAssists', 'secondaryAssists', 'points', 'penalties', 'penaltyMinutes')
+traditional_stats <- c('goals', 'primaryAssists', 'secondaryAssists', 'points')
 
 possession <- c('onIce_corsiPercentage', 'offIce_corsiPercentage', 'onIce_fenwickPercentage', 'offIce_fenwickPercentage')
 
