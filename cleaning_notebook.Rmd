@@ -7,103 +7,200 @@ output: html_document
 
 ```{r}
 #importing libraries
-library(rvest)
 library(plyr)
+library(dplyr)
 library(tidyverse)
 ```
 
 
 ```{r}
 #listing csvs within data folder
-season_files <- list.files(path='data', pattern="*.csv", full.names=TRUE)
+season_files <- list.files(path='data', pattern="nhl.+", full.names=TRUE)
 
 #combining all csvs into one list
 nhl17_20 <- ldply(season_files, read_csv)
 ```
 ```{r}
-#converting to tibble
+variables_to_keep <- c('name', 'position', 'team', 'season', 'situation', 'icetime',
+                       'I_F_goals', 'I_F_primaryAssists', 'I_F_secondaryAssists', 'I_F_points',
+                       'OnIce_F_shotAttempts', 'OnIce_A_shotAttempts', 'offIce_corsiPercentage', 
+                       'OnIce_F_unblockedShotAttempts', 'OnIce_A_unblockedShotAttempts', 'offIce_fenwickPercentage',
+                       'OnIce_F_goals', 'OnIce_A_goals',
+                       'I_F_xGoals', 'OnIce_F_xGoals', 'OnIce_A_xGoals','offIce_xGoalsPercentage')
+
+#leaving out the dataset's corsi, fenwick, and xgoal percentages to avoid already rounded numbers 
+```
+
+
+
+```{r}
+#selecting wanted columns and converting to tibble
 nhl17_20 <- nhl17_20 %>% 
+  select(all_of(variables_to_keep)) %>% 
   as_tibble()
 ```
 
 ```{r}
-#dropping duplicated columns
+#redoing calculations for formatting purposes
 nhl17_20 <- nhl17_20 %>% 
-  select(-c(shifts, penalityMinutes))
+  mutate(icetime = round(icetime/60, 2), #converting icetime to minutes
+         offIce_corsiPercentage = 100 * offIce_corsiPercentage,
+         offIce_fenwickPercentage = 100 * offIce_fenwickPercentage,
+         offIce_xGoalsPercentage = 100 * offIce_xGoalsPercentage,
+         corsi_percentage = 100 * round(OnIce_F_shotAttempts / (OnIce_F_shotAttempts + OnIce_A_shotAttempts), 4),
+         fenwick_percentage = 100 * round(OnIce_F_unblockedShotAttempts / (OnIce_F_unblockedShotAttempts + OnIce_A_unblockedShotAttempts), 4),
+         goals_for_percentage = 100 * round(OnIce_F_goals / (OnIce_F_goals + OnIce_A_goals), 4),
+         xGoals_for_percentage = 100 * round(OnIce_F_xGoals / (OnIce_F_xGoals + OnIce_A_xGoals), 4))
 ```
 
 ```{r}
-#remove I_F_ from column names. Unless otherwise stated, stats should be assumed as an individual metric
-colnames(nhl17_20) <- colnames(nhl17_20) %>% 
-  str_replace('I_F_', '')
-
-#rename misspelled columns
+#renaming columns
 nhl17_20 <- nhl17_20 %>% 
-  rename(penaltyMinutes = penalityMinutes,
-         penaltyMinutesDrawn = penalityMinutesDrawn)
+  rename(goals = I_F_goals,
+         primary_assists = I_F_primaryAssists,
+         secondary_assists = I_F_secondaryAssists,
+         points = I_F_points,
+         corsi_for = OnIce_F_shotAttempts,
+         corsi_against = OnIce_A_shotAttempts,
+         office_corsi_percentage = offIce_corsiPercentage,
+         fenwick_for = OnIce_F_unblockedShotAttempts,
+         fenwick_against = OnIce_A_unblockedShotAttempts,
+         office_fenwick_percentage = offIce_fenwickPercentage,
+         goals_for = OnIce_F_goals,
+         goals_against = OnIce_A_goals,
+         xGoals = I_F_xGoals,
+         xGoals_for = OnIce_F_xGoals,
+         xGoals_against = OnIce_A_xGoals,
+         office_xGoals_percentage = offIce_xGoalsPercentage)
 ```
 
 
 ```{r}
-#adding additional calculations
-nhl17_20 <- nhl17_20 %>% 
-  mutate(
-    goals_above_expected = goals-xGoals,
-    goals_per60 = (goals/(icetime/60))*60,
-    xGoals_per60 = (xGoals/(icetime/60))*60,
-    reboundGoals_Percentage = reboundGoals/goals,
-    lowDangerShots_Percentage = lowDangerShots/shotAttempts,
-    mediumDangerShots_Percentage = mediumDangerShots/shotAttempts,
-    highDangerShots_Percentage = highDangerShots/shotAttempts, 
-    lowDangerGoals_Percentage = lowDangerGoals/goals,
-    mediumDangerGoals_Percentage = mediumDangerGoals/goals,
-    highDangerGoals_Percentage = highDangerGoals/goals
-  )
+#adding additional calculations and re-arranging columns
+nhl17_20 <- nhl17_20 %>%
+  mutate(corsi_for_per60 = round((corsi_for/icetime)*60, 2),
+         corsi_against_per60 = round((corsi_against/icetime)*60, 2), 
+         goals_above_expected = round(goals-xGoals, 2),
+         goals_for_per60 = round((goals_for/(icetime))*60, 2),
+         xGoals_per60 = round((xGoals/(icetime))*60, 2),
+         xGoals_for_per60 = round((xGoals_for/icetime)*60, 2),
+         xGoals_against_per60 = round((xGoals_against/icetime)*60, 2)) %>% 
+  select(1:12, corsi_percentage, 13, corsi_for_per60, corsi_against_per60, 14:15, fenwick_percentage, 16:18, goals_for_percentage, goals_for_per60, 19, xGoals_per60, goals_above_expected, 20:21, xGoals_for_per60, xGoals_against_per60)
+  
 ```
 
 ```{r}
-#defining variable groups
-player_info <- c('name', 'position', 'team', 'season', 'situation', 'games_played', 'icetime')
-
-traditional_stats <- c('goals', 'primaryAssists', 'secondaryAssists', 'points', 'penalties', 'penaltyMinutes')
-
-possession <- c('onIce_corsiPercentage', 'offIce_corsiPercentage', 'onIce_fenwickPercentage', 'offIce_fenwickPercentage')
-
-goals_stats <- c('goals', 'xGoals', 'goals_above_expected', 'goals_per60', 'xGoals_per60')
-
-team_scoring_rates <- c('OnIce_F_xGoals', 'OffIce_F_xGoals', 'onIce_xGoalsPercentage', 'offIce_xGoalsPercentage')
-
-shot_quality <- c('shotAttempts', 'shotsOnGoal', 'rebounds', 'lowDangerShots', 'lowDangerShots_Percentage', 'lowDangerGoals', 'lowDangerGoals_Percentage', 'mediumDangerShots', 'mediumDangerShots_Percentage', 'mediumDangerGoals', 'mediumDangerGoals_Percentage', 'highDangerShots', 'highDangerShots_Percentage', 'highDangerGoals', 'highDangerGoals_Percentage')
+#creating team_logos to get colors and logos  
+team_logos <- teamcolors::teamcolors %>% 
+  filter(league == 'nhl') %>% 
+  mutate(team_abbrv = case_when(
+    name == 'Anaheim Ducks' ~ 'ANA',
+    name == 'Arizona Coyotes' ~ 'ARI',
+    name == 'Boston Bruins' ~ 'BOS',
+    name == 'Buffalo Sabres' ~ 'BUF',
+    name == 'Calgary Flames' ~ 'CGY',
+    name == 'Carolina Hurricanes' ~ 'CAR',
+    name == 'Chicago Blackhawks' ~ 'CHI',
+    name == 'Colorado Avalanche' ~ 'COL',
+    name == 'Columbus Blue Jackets' ~ 'CBJ',
+    name == 'Dallas Stars' ~ 'DAL',
+    name == 'Detroit Red Wings' ~ 'DET',
+    name == 'Edmonton Oilers' ~ 'EDM',
+    name == 'Florida Panthers' ~ 'FLA',
+    name == 'Los Angeles Kings' ~ 'L.A',
+    name == 'Minnesota Wild' ~ 'MIN',
+    name == 'Montreal Canadiens' ~ 'MTL',
+    name == 'Nashville Predators' ~ 'NSH',
+    name == 'New Jersey Devils' ~ 'N.J',
+    name == 'New York Islanders' ~ 'NYI',
+    name == 'New York Rangers' ~ 'NYR',
+    name == 'Ottawa Senators' ~ 'OTT',
+    name == 'Philadelphia Flyers' ~ 'PHI',
+    name == 'Pittsburgh Penguins' ~ 'PIT',
+    name == 'San Jose Sharks' ~ 'S.J',
+    name == 'St. Louis Blues' ~ 'STL',
+    name == 'Tampa Bay Lightning' ~ 'T.B',
+    name == 'Toronto Maple Leafs' ~ 'TOR',
+    name == 'Vancouver Canucks' ~ 'VAN',
+    name == 'Vegas Golden Knights' ~ 'VGK',
+    name == 'Washington Capitals' ~ 'WSH',
+    name == 'Winnipeg Jets' ~ 'WPG')) %>% 
+  rename(team_name = name,
+         team_color = primary) %>% 
+  select(team_name, team_abbrv, team_color, logo)
 ```
 
 ```{r}
-#narrowing dataset
+#unfortunately, teamcolors had most teams as black—added correct colors
+team_logos <- team_logos %>% 
+  mutate(team_color = case_when(
+    team_name == 'Anaheim Ducks' ~ '#F47A38',
+    team_name == 'Arizona Coyotes' ~ '#8C2633',
+    team_name == 'Boston Bruins' ~ '#FFB81C',
+    team_name == 'Buffalo Sabres' ~ '#002654',
+    team_name == 'Calgary Flames' ~ '#C8102E',
+    team_name == 'Carolina Hurricanes' ~ '#CC0000',
+    team_name == 'Chicago Blackhawks' ~ '#CF0A2C',
+    team_name == 'Colorado Avalanche' ~ '#6F263D',
+    team_name == 'Columbus Blue Jackets' ~ '#002654',
+    team_name == 'Dallas Stars' ~ '#006847',
+    team_name == 'Detroit Red Wings' ~ '#CE1126',
+    team_name == 'Edmonton Oilers' ~ '#041E42',
+    team_name == 'Florida Panthers' ~ '#041E42',
+    team_name == 'Los Angeles Kings' ~ '#111111',
+    team_name == 'Minnesota Wild' ~ '#154734',
+    team_name == 'Montreal Canadiens' ~ '#AF1E2D',
+    team_name == 'Nashville Predators' ~ '#FFB81C',
+    team_name == 'New Jersey Devils' ~ '#CE1126',
+    team_name == 'New York Islanders' ~ '#00539B',
+    team_name == 'New York Rangers' ~ '#0038A8',
+    team_name == 'Ottawa Senators' ~ '#C52032',
+    team_name == 'Philadelphia Flyers' ~ '#F74902',
+    team_name == 'Pittsburgh Penguins' ~ '#FCB514',
+    team_name == 'San Jose Sharks' ~ '#006D75',
+    team_name == 'St. Louis Blues' ~ '#002F87',
+    team_name == 'Tampa Bay Lightning' ~ '#002868',
+    team_name == 'Toronto Maple Leafs' ~ '#00205B',
+    team_name == 'Vancouver Canucks' ~ '#00205B',
+    team_name == 'Vegas Golden Knights' ~ '#B4975A',
+    team_name == 'Washington Capitals' ~ '#041E42',
+    team_name == 'Winnipeg Jets' ~ '#041E42'
+  ))
+```
+
+```{r}
 nhl17_20 <- nhl17_20 %>% 
-  select(player_info, traditional_stats, possession, goals_stats, team_scoring_rates, shot_quality)
+  left_join(team_logos, by = c('team' = 'team_abbrv'))
 ```
 
 ```{r}
 #saving resulting dataset
-nhl17_20 %>% 
+nhl17_20 %>%
   write_csv('nhl_stats_app/data/nhlstats.csv')
 ```
 
-```{r}
-test <- nhl17_20 %>% 
-  filter(season == '2019') %>% 
-  arrange(desc(points)) %>% 
-  head(10) %>% 
-  pull(name)
 
-nhl17_20 %>%
-       filter(season == '2019',
-              situation != 'all',
-              name %in% test) %>%
-       select(name, points, situation) %>%
-  mutate(name = factor(name, levels = rev(test))) %>% 
-       ggplot(aes(x = name, y = points)) +
-       geom_col(aes(fill = situation)) +
-      coord_flip()
+```{r}
+# test <- nhl17_20 %>%
+#   filter(season == '2019') %>%
+#   arrange(desc(points)) %>%
+#   head(10) %>%
+#   pull(name)
+#
+# nhl17_20 %>%
+#        filter(season == '2019',
+#               situation != 'all',
+#               name %in% test) %>%
+#        select(name, points, situation) %>%
+#   mutate(name = factor(name, levels = rev(test))) %>%
+#        ggplot(aes(x = name, y = points)) +
+#        geom_col(aes(fill = situation)) +
+#       coord_flip()
+```
+
+
+```{r}
+
 ```
 
 
