@@ -81,11 +81,12 @@ nhl17_20 <- nhl17_20 %>%
   mutate(corsi_for_per60 = round((corsi_for/icetime)*60, 2),
          corsi_against_per60 = round((corsi_against/icetime)*60, 2), 
          goals_above_expected = round(goals-xGoals, 2),
+         goals_per_60 = round((goals/(icetime))*60, 2),
          goals_for_per60 = round((goals_for/(icetime))*60, 2),
          xGoals_per60 = round((xGoals/(icetime))*60, 2),
          xGoals_for_per60 = round((xGoals_for/icetime)*60, 2),
          xGoals_against_per60 = round((xGoals_against/icetime)*60, 2)) %>% 
-  select(1:12, corsi_percentage, 13, corsi_for_per60, corsi_against_per60, 14:15, fenwick_percentage, 16:18, goals_for_percentage, goals_for_per60, 19, xGoals_per60, goals_above_expected, 20:21, xGoals_for_per60, xGoals_against_per60)
+  select(1:12, corsi_percentage, 13, corsi_for_per60, corsi_against_per60, 14:15, fenwick_percentage, 16:18, goals_per_60, goals_for_percentage, goals_for_per60, 19, xGoals_per60, goals_above_expected, 20:21, xGoals_for_per60, xGoals_against_per60)
   
 ```
 
@@ -200,9 +201,37 @@ nhl17_20 %>%
 
 
 ```{r}
-
+ nhl17_20 %>% 
+  filter(season == '2019',
+         situation == '5on5') %>% 
+        mutate(
+          across(
+            c(goals_for_per60, xGoals_per60, corsi_for_per60, 
+                 xGoals_against_per60, corsi_against_per60),
+          percent_rank)) %>% 
+        filter(name == 'Nathan MacKinnon') %>% 
+  select(name, goals_for_per60, xGoals_per60, corsi_for_per60, 
+                 xGoals_against_per60, corsi_against_per60) %>% 
+  pivot_longer(cols = 2:6, names_to = 'stat') %>% 
+  ggplot(aes(x = stat, y = value)) +
+  geom_col()
 ```
 
+```{r}
+ nhl17_20 %>% 
+  filter(season == '2019',
+         situation == '5on5') %>% 
+        mutate(
+          across(
+            c(goals_for_per60, xGoals_per60, corsi_for_per60, xGoals_against_per60, corsi_against_per60),
+          percent_rank)) %>% 
+        filter(name == 'Leon Draisaitl') %>% 
+  select(name, goals_for_per60, xGoals_per60, corsi_for_per60, 
+                 xGoals_against_per60, corsi_against_per60) %>% 
+  pivot_longer(cols = 2:6, names_to = 'stat') %>% 
+  ggplot(aes(x = stat, y = value)) +
+  geom_col()
+```
 
 
 ```{r}

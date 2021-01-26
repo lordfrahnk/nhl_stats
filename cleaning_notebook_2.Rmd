@@ -1,0 +1,49 @@
+---
+title: "cleaning_notebook_2"
+author: "Taylor Franklin"
+date: "1/18/2021"
+output: html_document
+---
+
+```{r}
+library(plyr)
+library(tidyverse)
+```
+
+```{r}
+#listing csvs within data folder
+team_season_files <- list.files(path='data', pattern="teams.+", full.names=TRUE)
+
+#combining all csvs into one list
+teams_nhl17_20 <- ldply(team_season_files, read_csv)
+```
+```{r}
+teams_nhl17_20 <- as_tibble(teams_nhl17_20) %>% 
+  mutate(xGoalDiff = xGoalsFor - xGoalsAgainst,
+         goalDiff = goalsFor - goalsAgainst) %>% 
+  select(team, season, situation, corsiPercentage, fenwickPercentage, xGoalsFor, xGoalsAgainst, xGoalDiff, goalsFor, goalsAgainst, goalDiff) 
+
+teams_nhl17_20 %>% 
+  write_csv('nhl_stats_app/data/teams_stats.csv')
+```
+
+```{r}
+teams_nhl17_20 %>% 
+  filter(situation == 'all',
+         season != '2019') %>% 
+  select(team, season, corsiPercentage, goalDiff) %>% 
+  ggplot(aes(x = corsiPercentage, y = goalDiff)) +
+  geom_point() 
+```
+
+```{r}
+test <- tibble(name = c('x', 'x', 'x', 'y', 'y', 'y', 'z', 'z', 'z'),
+       year = c('2017', '2018', '2019', '2017', '2018', '2019', '2017', '2018', '2019'),
+       points = c(25, 40, 35, 15, 20, 25, 30, 18, 55))
+
+test %>% 
+  dplyr::group_by(name) %>% 
+  dplyr::summarize(total_points = sum(points))
+
+```
+

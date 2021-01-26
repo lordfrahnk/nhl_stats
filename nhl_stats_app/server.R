@@ -23,7 +23,7 @@ shinyServer(function(input, output) {
       )) %>% 
       ggplot(aes(x = icetime, y = points, text = name)) + 
       geom_point(aes(color = position)) +
-      labs(title = 'More ice time, more points!', 
+      labs(title = 'Forward and more ice time, more points!', 
            x = 'Ice Time (Minutes)',
            y = 'Points')
     
@@ -89,9 +89,18 @@ shinyServer(function(input, output) {
       ggplot(aes(x = corsi_for_per60, y = corsi_against_per60,
                  label = name, 
                  text = team)) +
-      geom_point() +
+      geom_point(color = team_and_color[input$possession_team]) +
+      labs(title = 'Corsi Rates Per 60 (5-on-5)',
+           x = 'Corsi For Per 60',
+           y = 'Corsi Against Per 60') +
+      scale_x_continuous(limits = c(40, 75)) +
+      scale_y_continuous(limits = c(40, 75)) +
       geom_vline(xintercept = x_int) +
-      geom_hline(yintercept = y_int)
+      geom_hline(yintercept = y_int) +
+      annotate('text', x = 75, y = 75, label = 'Fun') +
+      annotate('text', x = 40, y = 75, label = 'Bad') +
+      annotate('text', x = 75, y = 40, label = 'Good') +
+      annotate('text', x = 40, y = 40, label = 'Dull')
     
     ggplotly(cp60, tooltip = c('x', 'y', 'label', 'text'))
   })
@@ -121,9 +130,10 @@ shinyServer(function(input, output) {
       ungroup() %>% 
       select(team, team_xG, team_goals) %>% 
       ggplot(aes(x = team_xG, y = team_goals, text = team)) + 
-      geom_point()
-    
-    #look for y = x line
+      geom_point(color = 'salmon') +
+      labs(title = 'Comparing Goals to Expected Goals',
+           x = 'xG',
+           y = 'Goals')
     
     ggplotly(xG_goals_by_team, tooltip = c('text', 'x', 'y'))
   })
@@ -137,6 +147,43 @@ shinyServer(function(input, output) {
                xGoals_for, xGoals_against, xGoals_for_per60, 
                xGoals_against_per60) %>% 
         arrange(desc(xGoals))
+    })
+    
+    output$xGoals_Goals_scatter <- renderPlotly({
+      
+      x_int1 <- nhl_stats %>% 
+        filter(season == input$goals_season,
+               situation == '5on5') %>% 
+        summarize(mean(xGoals_per60)) %>% 
+        unlist()
+      
+      y_int1 <- nhl_stats %>% 
+        filter(season == input$goals_season,
+               situation == '5on5') %>% 
+        summarize(mean(goals_per_60)) %>% 
+        unlist()
+      
+      GxG60 <- nhl_stats %>% 
+        filter(season == input$goals_season,
+               team_name == input$xgoals_team,
+               situation == '5on5') %>% 
+        select(name, team_name, goals_per_60, xGoals_per60) %>% 
+        ggplot(aes(x = xGoals_per60, y = goals_per_60,
+                   label = name)) + 
+        geom_point(color = team_and_color[input$xgoals_team]) +
+        labs(title = 'xGoals Per 60 and Goals Per 60',
+             x = 'xGoals Per 60',
+             y = 'Goals Per 60') +
+        scale_x_continuous(limits = c(-0.25, 1.5)) +
+        scale_y_continuous(limits = c(-0.25, 4)) +
+        geom_vline(xintercept = x_int1) +
+        geom_hline(yintercept = y_int1) +
+        annotate('text', x = 1.25, y = 4, label = 'Good') +
+        annotate('text', x = 0, y = 4, label = 'Finisher/Lucky') +
+        annotate('text', x = 0, y = 0, label = 'Bad') +
+        annotate('text', x = 1.25, y = 0, label = 'No Finish/Unlucky')
+      
+      ggplotly(GxG60, tooltip = c('x', 'y', 'name'))
     })
     
     output$xGoals_per60_scatter <- renderPlotly({
@@ -164,11 +211,31 @@ shinyServer(function(input, output) {
         labs(title = 'Expected Goals Per 60 (5-on-5)',
              x = 'xGoals For Per 60',
              y = 'xGoals Against Per 60') +
-        geom_point() +
+        geom_point(color = team_and_color[input$xgoals_team]) +
+        scale_x_continuous(limits = c(0, 6)) +
+        scale_y_continuous(limits = c(0, 6)) +
         geom_vline(xintercept = x_int) +
-        geom_hline(yintercept = y_int)
+        geom_hline(yintercept = y_int) +
+        annotate('text', x = 6, y = 6, label = 'Fun') +
+        annotate('text', x = 0, y = 6, label = 'Bad') +
+        annotate('text', x = 6, y = 0, label = 'Good') +
+        annotate('text', x = 0, y = 0, label = 'Dull')
       
       ggplotly(xG60scatter, tooltip = c('x', 'y', 'label', 'text'))
       
+    })
+    
+    output$player1_plot <- renderPlot({
+      nhl_stats %>% 
+        select(name, goals_for_per60, xGoals_per60, corsi_for_per60, 
+               xGoals_against_per60, corsi_against_per60) %>% 
+        mutate(
+          across(
+            c(goals_for_per60, xGoals_per60, corsi_for_per60, 
+                 xGoals_against_per60, corsi_against_per60),
+          scale)) %>% 
+        filter(name == input$player1) %>% 
+        ggplot() + 
+        geom_col()
     })
 })

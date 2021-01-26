@@ -3,7 +3,8 @@ shinyUI(
       'NHL Statistics',
       tabPanel('Intro & Glossary',
                h1('Introduction'),
-               p('Welcome to NHL Stats by...'),
+               p("Welcome to NHL Stats! The purpose of this site is to provide insights on your favorite teams and players over the past 3 NHL seasons.
+                 Check out the glossary below to review the terminology used as well as the Concepts tab for additional information!"),
                h2('Glossary'),
                br(),
                h4("On-Ice Situations"),
@@ -38,22 +39,33 @@ shinyUI(
                p("In order to account for ice time and calculate efficiency, per 60 metrics are often utilized. Corsi Per 60, for example, is the number of shot attempts taken by a player's team while on the ice divided by their ice time and then multiplied by 60. 
                  To say this a different way, the calculation will always be:"),
                  p(em("(stat ÷ ice time) · 60")),
+               br(),
+               br(),
+               p("Data courtesy of www.moneypuck.com", align = "center"),
+               ),
+      tabPanel("Concepts",
                h3("Ice Time and Position"),
-               h5("As previously mentioned, points on their own lack context. For example, let's consider ice time and position by player."),
                plotlyOutput('points_toi_plot'),
-               h5("There are two main takeaways from this visualization. 
-                            First, ice time and points are positively correlated, so you can expect those who play the most will have the most points.
-                            Also, there are distinct groups when looking at this by position. 
-                            Does it make sense to determine a defenseman's worth to point production when their primary role is to prevent goals?"),
-               h3("Corsi/Fenwick shortcomings"),
-               h5("We can likely agree that you'd rather be a team that is consistently outshooting it's opponents, but that doesn't matter if your shot attempts miss the net, are blocked, or are low quality chances (such as a slap shot from center ice). 
-                            Possession is more challenging to isolate for individual impact because hockey is a team game.
-                            For this reason, Corsi and Fenwick aren't the strongest predictor of individual successes, but it can provide some insight as to a player's general on ice impact. 
-                            Shot based metrics are useful, but they will not be as impactful as goal related metrics when examining individual or team success."),
-               plotlyOutput('goals_plot')),
+               p("There are two main takeaways from this visualization. 
+                  First, ice time and points are positively correlated, so you can expect those who play the most will have the most points.
+                  Also, there are distinct groups when looking at this by position. 
+                  Does it make sense to determine a defenseman's worth to point production when their primary role is to prevent goals?"),
+               br(),
+               h3("Possession based statistics shortcomings"),
+               p("We can likely agree that you'd rather be a team that is consistently outshooting it's opponents, but that doesn't matter if your shot attempts miss the net, are blocked, or are low quality chances (such as a slap shot from center ice). 
+                  Possession is more challenging to isolate for individual impact because hockey is a team game.
+                  For this reason, Corsi and Fenwick aren't the strongest predictor of individual successes, but it can provide some insight as to a player's general on ice impact. 
+                  Shot based metrics are useful, but they will not be as impactful as goal related metrics when examining individual or team success."),
+               br(),
+               h3("Expected Goals Are Useful in Predicting Future Goals"),
+               plotlyOutput('goals_plot'),
+               br(),
+               br(),
+               p("Data courtesy of www.moneypuck.com", align = "center"),
+      ),
       tabPanel('Points',
                h2('Points'),
-               h5("In hockey, like most sports, traditional statistics are often the most utilized and referenced by broadcasters and fans. 
+               p("In hockey, like most sports, traditional statistics are often the most utilized and referenced by broadcasters and fans. 
                             Goals, assists, and points are quantifiable—they're easy to point out and observe. You can explore the NHL's points leaders over the 
                             last 3 seasons using the drop down boxes below."), 
                splitLayout(cellWidths = c('25%', '25%'), 
@@ -69,27 +81,18 @@ shinyUI(
                br(),
                DTOutput("traditionalTable"),
                h3("Points by Situation"),
-               h5("All the tables and visualizations above show points accumulated at all situations. 
-                            Beyond that, look at how many points the leading scorers generate during different game situations."),
+               p("The table above shows points accumulated at all situations. 
+                  Look at how many points the leading scorers generate during different game situations."),
                plotlyOutput('points_situation_plot'),
-               h5("Those with high point production often receive a big boost to their numbers from ice time during the power play. 
-                         For this reason, you'll often see analysts reference player performance at 5-on-5 rather than highlighting success while their team has a man-advantage. 
-                            Throughout the rest of this site, you can assume all the data is focused on play at 5-on-5 unless otherwise stated.")
+               p("Those with high point production often receive a big boost to their numbers from ice time during the power play. 
+                  For this reason, you'll often see analysts reference player performance at 5-on-5 rather than highlighting success while their team has a man-advantage. 
+                  Throughout the rest of this site, you can assume all the data is focused on play at 5-on-5 unless otherwise stated."),
+               br(),
+               br(),
+               p("Data courtesy of www.moneypuck.com", align = "center"),
       ),
       tabPanel('Possession',
                h2('Possession'),
-               h5("Puck possession is often referenced when evaluating a team's performance—but why? In theory, teams that tend to have control of the puck tend control the game. 
-                            The NHL does not provide true possession via player and puck tracking, so how let's explore how this is possible"),
-               h3('Corsi'),
-               h5("One of the first widely adopted possession metrics is called Corsi and it utilizes shot attempts as a proxy for possession. 
-                            In order to calculate this in the context of a single game, you add up all the shot attempts by Team A and divide that by the 
-                            sum of the shot attempts from both teams. Likewise, you can do this with individual players by adding up all the shots their 
-                            team took while they were on the ice and dividing that by the sum of all the shots taken by both teams while that player was on the ice."),
-               h3('Fenwick'),
-               h5("Like Corsi, Fenwick, is another possession based statistic centered around shot attempts. 
-                         The key difference is Fenwick only factors in unblocked shots whereas Corsi calculates all shot attempts.
-                         Fenwick begins to considers shot quality (as in they must not be blocked by a defending player) but does not quantify the quality of each shot individually.
-                            of each individual shot."),
                splitLayout(cellWidths = c('25%', '40%'),
                selectInput('corsi_season',
                            'Select a season:',
@@ -101,16 +104,18 @@ shinyUI(
                            max = 1500,
                            value = 500)),
                DTOutput("corsiTable"),
+               h3("Shot Attempts - Territorial Advantage"),
                selectInput("possession_team",
                            'Select a team:',
-                           choices = unique(nhl_stats$team_name),
+                           choices = sort(unique(nhl_stats$team_name)),
                            selected = 'Anaheim Ducks'),
                plotlyOutput('corsi_per60_scatter'),
-               plotlyOutput('corsi_team_plot'),
-      ),
+               br(),
+               br(),
+               p("Data courtesy of www.moneypuck.com", align = "center")
+               ),
       tabPanel('Expected Goals',
                h3('Expected Goals'),
-               h5("As we learned from the possession statistics, goals are king when it comes to determining success. However, we can use shot quality (rather than quantity) to predict future goals. This is where expected goals (xG) comes into play."),
                selectInput('goals_season',
                            'Select Season:',
                            choices = unique(nhl_stats$season),
@@ -118,14 +123,31 @@ shinyUI(
                DTOutput("goalsTable"),
                selectInput('xgoals_team',
                            'Select a team:',
-                           choices = unique(nhl_stats$team_name),
+                           choices = sort(unique(nhl_stats$team_name)),
                            selected = 'Anaheim Ducks'),
-               h3("Goals vs expected goals"),
+               h3("Individual Shooting Ability"),
+               plotlyOutput('xGoals_Goals_scatter'),
+               h3("Team Shot Quality"),
                plotlyOutput('xGoals_per60_scatter'),
-               
-      ),
-      tabPanel('Player Comparison',
-               DTOutput("shot_qualityTable"))
+               br(),
+               br(),
+               p("Data courtesy of www.moneypuck.com", align = "center")
+      )
+      # tabPanel('Player Comparison',
+      #          selectInput('player1',
+      #                      'Select a player:',
+      #                      choices = unique(nhl_stats$name),
+      #                      selected = 'Leon Draisaitl'),
+      #          selectInput('player2',
+      #                      'Select another player:',
+      #                      choices = unique(nhl_stats$name),
+      #                      selected = 'Nathan MacKinnon'),
+      #          plotOutput('player1_plot'), 
+      #          plotOutput('player2_plot'),
+      #          br(),
+      #          br(),
+      #          p("Data courtesy of www.moneypuck.com", align = "center")
+      # )
     )
 )
 

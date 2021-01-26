@@ -9,6 +9,11 @@ nhl_stats <- read_csv('data/nhlstats.csv')
 
 team_stats <- read_csv('data/teams_stats.csv')
 
+team_and_color <- nhl_stats %>% 
+  select(team_name, team_color) %>% 
+  unique() %>% 
+  deframe()
+
 player_info <- c('name', 'position', 'team')
 
 possession <- c('onIce_corsiPercentage', 'onIce_fenwickPercentage')
